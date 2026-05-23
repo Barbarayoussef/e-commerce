@@ -50,7 +50,7 @@ export default function Register() {
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     axios
-      .post("https://nti-ecommerce.vercel.app/api/v1/auth/signUp", data)
+      .post(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/signUp`, data)
       .then((res) => {
         console.log(res);
         toast.success(res.data.message);

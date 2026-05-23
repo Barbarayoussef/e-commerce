@@ -26,7 +26,7 @@ export default function ProductDetails() {
     const fetchProduct = async () => {
       try {
         const res = await axios.get(
-          `https://nti-ecommerce.vercel.app/api/v1/products/${id}`,
+          `${process.env.NEXT_PUBLIC_BASE_URL}/products/${id}`,
         );
         console.log(res);
         setProduct(res.data.Product);

@@ -20,26 +20,36 @@ export const authOptions: NextAuthOptions = {
         password: {},
       },
       async authorize(credentials) {
-        const res = await fetch(`${process.env.baseUrl}/auth/signIn`, {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email and password are required");
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/signIn`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: credentials?.email,
-            password: credentials?.password,
+            email: credentials.email,
+            password: credentials.password,
           }),
         });
-        const data = await res.json();
-        let decodedToken: DecodedToken = jwtDecode(data.token);
-        if (data.message == "success") {
-          //   return data;
-          return {
-            token: data.token,
-            user: decodedToken,
-            id: decodedToken.id,
-          };
-        } else {
-          throw new Error("invalid");
+
+        if (!res.ok) {
+          throw new Error("Invalid credentials");
         }
+
+        const data = await res.json();
+
+        if (data.message !== "success" || !data.token) {
+          throw new Error("Invalid credentials");
+        }
+
+        const decodedToken: DecodedToken = jwtDecode(data.token);
+
+        return {
+          token: data.token,
+          user: decodedToken,
+          id: decodedToken.id,
+        };
       },
     }),
   ],
@@ -47,14 +57,14 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.token = (user as any).token;
-        token.user = (user as any).user;
+        token.token = user.token;
+        token.user = user.user;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user = (token as any).user;
+        session.user = token.user;
       }
       return session;
     },
