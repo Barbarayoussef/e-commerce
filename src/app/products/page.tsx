@@ -6,18 +6,17 @@ import { fetchCategories } from "../_api/fetchCategories.api";
 
 export default async function Product() {
   const products = await fetchProducts();
-  const categories = await fetchCategories();
+
+  if (!products || products.length === 0) {
+    return <h2 className="text-center">No products found.</h2>;
+  }
 
   return (
     <>
-      <h1 className="text-center text-2xl ">Shop Now</h1>
-      <div className="flex gap-4 justify-center flex-wrap ">
+      <h1 className="text-center text-2xl">Shop Now</h1>
+      <div className="flex gap-4 justify-center flex-wrap">
         {products.map((product: Product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            categories={categories}
-          ></ProductCard>
+          <ProductCard key={product._id} product={product} />
         ))}
       </div>
     </>

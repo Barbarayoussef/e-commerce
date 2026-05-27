@@ -1,16 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ShoppingBag,
-  Menu,
-  X,
-  Instagram,
-  Facebook,
-  Twitter,
-} from "lucide-react"; // Using Lucide for consistency
+import { ShoppingBag, Menu, X, Instagram, Twitter } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import axiosAuth from "@/lib/axiosAuth";
 
 const NavItem = ({
   href,
@@ -42,8 +36,8 @@ const NavItem = ({
           isActive ? "w-full" : "w-0 group-hover:w-full"
         }`}
       />
-      {badge ? (
-        <span className="absolute -top-2 -right-3 bg-destructive text-destructive-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+      {badge && badge > 0 ? (
+        <span className="absolute -top-2 -right-4 bg-destructive text-destructive-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
           {badge}
         </span>
       ) : null}
@@ -53,7 +47,50 @@ const NavItem = ({
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const session = useSession();
+  const { data: session, status } = useSession();
+  const [cartCount, setCartCount] = useState<number>(0);
+
+  // Memoize the counter function to efficiently handle counts for both states
+  const updateCartCount = useCallback(async () => {
+    if (status === "loading") return;
+
+    if (status === "authenticated" && session) {
+      // Fetch totals from Database for Logged-In Users
+      try {
+        const res = await axiosAuth.get("/cart");
+        const items = res.data.cart?.products || [];
+        const total = items.reduce(
+          (sum: number, p: any) => sum + p.quantity,
+          0,
+        );
+        setCartCount(total);
+      } catch (err) {
+        setCartCount(0);
+      }
+    } else {
+      // Compute totals from LocalStorage for Guest Users
+      const localCart = localStorage.getItem("guest_cart");
+      if (localCart) {
+        const parsed = JSON.parse(localCart);
+        const total = parsed.reduce(
+          (sum: number, p: any) => sum + p.quantity,
+          0,
+        );
+        setCartCount(total);
+      } else {
+        setCartCount(0);
+      }
+    }
+  }, [session, status]);
+
+  useEffect(() => {
+    updateCartCount();
+
+    // Listen for custom button events fired from Product Cards
+    window.addEventListener("cart-updated", updateCartCount);
+    return () => window.removeEventListener("cart-updated", updateCartCount);
+  }, [updateCartCount]);
+
   function handleLogOut() {
     signOut({ callbackUrl: "/login" });
   }
@@ -74,15 +111,14 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-6">
           <NavItem href="/">Home</NavItem>
-
           <NavItem href="/products">Shop</NavItem>
-          <NavItem href="/categories">Categories</NavItem>
-          <NavItem href="/brands">Brands</NavItem>
+          <NavItem href="/categories">Brands</NavItem>
           <NavItem href="/order">Orders</NavItem>
           <NavItem href="/wishlist">Wishlist</NavItem>
-          {session.status === "authenticated" && (
-            <NavItem href="/cart">Cart</NavItem>
-          )}
+          {/* FIX: Permanently rendered for all users, passing a dynamic state badge */}
+          <NavItem href="/cart" badge={cartCount}>
+            Cart
+          </NavItem>
         </div>
 
         {/* Actions */}
@@ -93,14 +129,13 @@ export default function Navbar() {
           </div>
 
           <div className="hidden sm:flex items-center gap-2">
-            {session.status === "authenticated" ? (
-              <Link
+            {status === "authenticated" ? (
+              <button
                 onClick={handleLogOut}
-                href="/login"
-                className="px-4 py-2 text-sm font-medium hover:text-primary"
+                className="px-4 py-2 text-sm font-medium hover:text-primary transition-colors"
               >
-                logout
-              </Link>
+                Logout
+              </button>
             ) : (
               <>
                 <Link
@@ -139,23 +174,33 @@ export default function Navbar() {
             <Link href="/categories" onClick={() => setIsOpen(false)}>
               Categories
             </Link>
-            {session.status === "authenticated" && (
-              <Link href="/cart" onClick={() => setIsOpen(false)}>
-                Cart (3)
-              </Link>
-            )}
+            {/* FIX: Mobile Cart now accessible with accurate client state length values */}
+            <Link href="/cart" onClick={() => setIsOpen(false)}>
+              Cart ({cartCount})
+            </Link>
 
             <hr />
-            {session.status === "authenticated" ? (
-              <Link href="/login" className="font-bold" onClick={handleLogOut}>
-                logout
-              </Link>
+            {status === "authenticated" ? (
+              <button
+                className="font-bold text-center block w-full py-2"
+                onClick={handleLogOut}
+              >
+                Logout
+              </button>
             ) : (
               <>
-                <Link href="/login" className="font-bold">
+                <Link
+                  href="/login"
+                  className="font-bold"
+                  onClick={() => setIsOpen(false)}
+                >
                   Login
                 </Link>
-                <Link href="/register" className="text-primary font-bold">
+                <Link
+                  href="/register"
+                  className="text-primary font-bold"
+                  onClick={() => setIsOpen(false)}
+                >
                   Register
                 </Link>
               </>

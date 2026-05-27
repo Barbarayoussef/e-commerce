@@ -36,6 +36,7 @@ const formSchema = z.object({
     .string()
     .min(3, "Name must be at least 3 characters.")
     .max(30, "Name must be at most 30 characters."),
+  phone: z.string().min(11, "Phone must be at least 11 characters."),
 });
 
 export default function Register() {
@@ -45,21 +46,43 @@ export default function Register() {
       email: "",
       password: "",
       name: "",
+      phone: "",
     },
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     axios
-      .post(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/signUp`, data)
+      .post(`http://localhost:5000/api/v1/auth/signup`, data)
       .then((res) => {
         console.log(res);
-        toast.success(res.data.message);
+        toast.success("Registration successful!", {
+          description:
+            "A verification email has been sent. Please check your inbox.",
+          duration: 8000,
+        });
         localStorage.setItem("token", res.data.token);
-        window.location.href = "/login"; //do refresh that is cons
-        // redirect("/login", RedirectType.replace); //must be server
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 8000);
       })
       .catch((err) => {
-        toast.error(err.response.data.err);
+        if (err.response && err.response.data) {
+          const errorData = err.response.data;
+
+          // Handle array of validation errors
+          if (errorData.message && Array.isArray(errorData.message)) {
+            errorData.message.forEach((e) => toast.error(e.message));
+          } else {
+            toast.error(
+              errorData.message || errorData.error || "An error occurred",
+            );
+          }
+        } else if (err.request) {
+          toast.error("Cannot connect to backend server.");
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
+        console.error(err);
       });
   }
 
@@ -129,6 +152,27 @@ export default function Register() {
                       type="password"
                       aria-invalid={fieldState.invalid}
                       placeholder="*******"
+                      autoComplete="off"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="phone"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="form-rhf-demo-title">
+                      Phone Number
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="phone"
+                      type="tel"
+                      aria-invalid={fieldState.invalid}
                       autoComplete="off"
                     />
                     {fieldState.invalid && (

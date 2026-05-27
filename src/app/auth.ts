@@ -24,29 +24,34 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required");
         }
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/signIn`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-          }),
-        });
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          },
+        );
 
         if (!res.ok) {
-          throw new Error("Invalid credentials");
+          const error = await res.json();
+          throw new Error(error.message || "Invalid credentials");
         }
 
         const data = await res.json();
 
-        if (data.message !== "success" || !data.token) {
+        if (!data.accessToken) {
           throw new Error("Invalid credentials");
         }
 
-        const decodedToken: DecodedToken = jwtDecode(data.token);
+        const decodedToken: DecodedToken = jwtDecode(data.accessToken);
 
         return {
-          token: data.token,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
           user: decodedToken,
           id: decodedToken.id,
         };
@@ -57,7 +62,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.token = user.token;
+        token.accessToken = user.accessToken;
+        token.refreshToken = user.refreshToken;
         token.user = user.user;
       }
       return token;
@@ -65,6 +71,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user = token.user;
+        session.accessToken = token.accessToken;
       }
       return session;
     },

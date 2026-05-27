@@ -28,9 +28,9 @@ export default function ProductDetails() {
         const res = await axios.get(
           `${process.env.NEXT_PUBLIC_BASE_URL}/products/${id}`,
         );
-        console.log(res);
-        setProduct(res.data.Product);
-        setActiveImage(res.data.Product.imageCover);
+        console.log(res.data);
+        setProduct(res.data.product);
+        setActiveImage(res.data.product.imageCover);
       } catch (err) {
         console.error(err);
       } finally {

@@ -5,6 +5,7 @@ import ProductCard from "../app/_component/productCard/page";
 import { fetchCategories } from ".././app/_api/fetchCategories.api";
 export default async function Home() {
   const products = await fetchProducts();
+  console.log(products);
   const categories = await fetchCategories();
 
   return (
@@ -13,7 +14,7 @@ export default async function Home() {
       <div className="flex gap-4 justify-center flex-wrap ">
         {products.map((product: Product) => (
           <ProductCard
-            key={product.id}
+            key={product._id}
             product={product}
             categories={categories}
           ></ProductCard>

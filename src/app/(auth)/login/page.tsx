@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import * as z from "zod";
 import axios from "axios";
 import Link from "next/link";
-
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,6 +34,26 @@ const formSchema = z.object({
 });
 
 export default function Login() {
+  const searchParams = useSearchParams();
+
+  React.useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      toast.success("Email verified! You can now login.");
+    }
+    if (searchParams.get("error") === "link-expired") {
+      toast.error("Verification link expired. Please register again.");
+    }
+    if (searchParams.get("error") === "link-expired") {
+      toast.error("Verification link expired.", {
+        description: "Please request a new verification email.",
+        duration: 8000,
+        action: {
+          label: "Resend",
+          onClick: () => (window.location.href = "/resend-verification"),
+        },
+      });
+    }
+  }, [searchParams]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -43,18 +63,6 @@ export default function Login() {
   });
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    // axios
-    //   .post("https://nti-ecommerce.vercel.app/api/v1/auth/signIn", data)
-    //   .then((res) => {
-    //     console.log(res.data.token);
-    //     if (res.data.message == "success") {
-    //       toast.success(res.data.message);
-
-    //     }
-    //     localStorage.setItem("token", res.data.token);
-    //     window.location.href = "/";
-    //   });
-
     const res = await signIn("credentials", {
       email: data.email,
       password: data.password,
@@ -126,13 +134,15 @@ export default function Login() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 border-t-0">
-          <Button
-            type="submit"
-            form="form-rhf-demo"
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
+          <Button type="submit" form="form-rhf-demo" className="w-full">
             Login
           </Button>
+          <Link
+            href="/forgot-password"
+            className="text-sm text-primary hover:underline text-center"
+          >
+            Forgot your password?
+          </Link>
           <p className="text-sm text-center text-muted-foreground">
             Do not have an account?{" "}
             <Link
@@ -140,6 +150,15 @@ export default function Login() {
               className="text-primary hover:underline font-medium"
             >
               Sign up
+            </Link>
+          </p>
+          <p className="text-sm text-center text-muted-foreground">
+            Did not receive verification email?{" "}
+            <Link
+              href="/resend-verification"
+              className="text-primary hover:underline font-medium"
+            >
+              Resend
             </Link>
           </p>
         </CardFooter>

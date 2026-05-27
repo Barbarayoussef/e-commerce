@@ -10,8 +10,8 @@ export default function CategoryCard({ category }: { category: Category }) {
     <Card className="overflow-hidden flex flex-col h-full group w-64 my-5 ">
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
         <Image
-          src={category.image}
-          alt={category.name}
+          src={category.image || "/placeholder.png"}
+          alt={category.name || "Category image"}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
