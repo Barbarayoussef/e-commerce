@@ -107,12 +107,12 @@ export default function UnifiedCheckoutPage() {
           window.location.href = res.data.url;
         } else {
           toast.success("Order placed successfully!");
-          router.push("/orders");
+          router.push("/order");
         }
       } else {
         // --- PATH B: Guest User Submission ---
         const res = await axios.post(
-          "http://localhost:5000/api/v1/orders/guest-checkout",
+          `${process.env.NEXT_PUBLIC_BASE_URL}/orders/guest-checkout`,
           {
             guestInfo,
             paymentMethod,
@@ -124,11 +124,20 @@ export default function UnifiedCheckoutPage() {
         // Safe cleanup for browser memory
         localStorage.removeItem("guest_cart");
 
+        // Save guest order ID for later tracking
+        const orderId = res.data.order?._id || "";
+        if (orderId) {
+          const existingOrders = localStorage.getItem("guest_orders");
+          const orderIds = existingOrders ? JSON.parse(existingOrders) : [];
+          orderIds.push(orderId);
+          localStorage.setItem("guest_orders", JSON.stringify(orderIds));
+        }
+
         if (paymentMethod === "card" && res.data.url) {
           window.location.href = res.data.url;
         } else {
           toast.success("Guest order successfully registered!");
-          router.push(`/orders/success?id=${res.data.order?._id || ""}`);
+          router.push(`/order/success?id=${orderId}`);
         }
       }
     } catch (err: any) {
@@ -148,6 +157,40 @@ export default function UnifiedCheckoutPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-lg">
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+
+      {/* Order Summary */}
+      {cartItems.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Order Summary</CardTitle>
+            <CardDescription>{cartItems.length} item(s) in your cart</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {cartItems.map((item: any, i: number) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span>
+                  {item.name}{" "}
+                  <span className="text-muted-foreground">× {item.quantity}</span>
+                </span>
+                <span className="font-medium">
+                  EGP {item.totalPrice || item.price * item.quantity}
+                </span>
+              </div>
+            ))}
+            <div className="border-t pt-3 flex justify-between font-bold">
+              <span>Total</span>
+              <span>
+                EGP{" "}
+                {cartItems.reduce(
+                  (sum: number, item: any) =>
+                    sum + (item.totalPrice || item.price * item.quantity),
+                  0,
+                )}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         {/* --- CONDITIONAL UI: Only display Contact Info inputs to Guests --- */}
