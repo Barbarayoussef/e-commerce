@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import axiosAuth from "@/lib/axiosAuth";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,13 +25,34 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session) {
-      axiosAuth
-        .get("/orders")
-        .then((res) => setOrders(res.data.orders))
-        .catch(() => setOrders([]))
-        .finally(() => setLoading(false));
-    }
+    const loadOrders = async () => {
+      try {
+        if (session) {
+          const res = await axiosAuth.get("/orders");
+          setOrders(res.data.orders || []);
+        } else {
+          const stored = localStorage.getItem("guest_orders");
+          if (stored) {
+            const orderIds: string[] = JSON.parse(stored);
+            const results = await Promise.all(
+              orderIds.map((id) =>
+                axios
+                  .get(`${process.env.NEXT_PUBLIC_BASE_URL}/orders/guest/${id}`)
+                  .then((res) => res.data.order)
+                  .catch(() => null),
+              ),
+            );
+            setOrders(results.filter(Boolean));
+          }
+        }
+      } catch {
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
   }, [session]);
 
   if (loading) return <Loading />;
@@ -85,7 +107,13 @@ export default function OrdersPage() {
               </div>
               <div className="flex justify-between items-center mt-4">
                 <p className="font-bold">Total: EGP {order.totalOrderPrice}</p>
-                <Link href={`/order/${order._id}`}>
+                <Link
+                  href={
+                    session
+                      ? `/order/${order._id}`
+                      : `/order/success?id=${order._id}`
+                  }
+                >
                   <Button variant="outline" size="sm">
                     View Details
                   </Button>

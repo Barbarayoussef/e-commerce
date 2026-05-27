@@ -15,12 +15,51 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "next-auth/react";
+import axiosAuth from "@/lib/axiosAuth";
+import { toast } from "sonner";
 
 export default function ProductDetails() {
   const { id } = useParams();
+  const { data: session } = useSession();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState("");
+
+  const addToCart = async () => {
+    if (!product) return;
+    if (session) {
+      try {
+        await axiosAuth.post("/cart", { productId: product._id });
+        toast.success("Added to cart!");
+        window.dispatchEvent(new Event("cart-updated"));
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || "Failed to add to cart");
+      }
+    } else {
+      const localCart = localStorage.getItem("guest_cart");
+      const currentCart = localCart ? JSON.parse(localCart) : [];
+      const existingIndex = currentCart.findIndex(
+        (item: any) => item.productId === product._id,
+      );
+      if (existingIndex > -1) {
+        currentCart[existingIndex].quantity += 1;
+        currentCart[existingIndex].totalPrice =
+          currentCart[existingIndex].quantity * currentCart[existingIndex].price;
+      } else {
+        currentCart.push({
+          productId: product._id,
+          name: product.name || product.title,
+          price: product.price,
+          quantity: 1,
+          totalPrice: product.price,
+        });
+      }
+      localStorage.setItem("guest_cart", JSON.stringify(currentCart));
+      toast.success("Added to guest cart!");
+      window.dispatchEvent(new Event("cart-updated"));
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -125,13 +164,18 @@ export default function ProductDetails() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-border/40">
-            <Button className="flex-1 h-14 text-lg bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20">
+            <Button
+              className="flex-1 h-14 text-lg bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20"
+              onClick={addToCart}
+              disabled={product.stock === 0}
+            >
               <ShoppingCart className="w-5 h-5" />
-              Add to Cart
+              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
             </Button>
             <Button
               variant="outline"
               className="h-14 w-14 border-border/60 hover:bg-rose-50 hover:text-primary"
+              onClick={() => toast.info("Wishlist feature coming soon!")}
             >
               <Heart className="w-6 h-6" />
             </Button>

@@ -38,7 +38,7 @@ export default function OrderSuccessPage() {
       return;
     }
     axios
-      .get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/orders/guest/${orderId}`)
+      .get(`${process.env.NEXT_PUBLIC_BASE_URL}/orders/guest/${orderId}`)
       .then((res) => setOrder(res.data.order))
       .catch(() => setOrder(null))
       .finally(() => setLoading(false));
